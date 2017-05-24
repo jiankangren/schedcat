@@ -1,3 +1,4 @@
+from task import task # Abstract representation of task.
 from audsley import audsley
 import sys
 
