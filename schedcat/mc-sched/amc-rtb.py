@@ -1,7 +1,10 @@
+#AMC Priority assignment based on: 
+#Response-Time Analysis for Mixed Criticality Systems - S.K. Baruah et.al.
+#Link: https://www-users.cs.york.ac.uk/burns/RTSS.pdf
+
 from task import task # Abstract representation of task.
 from audsley import audsley
 import sys
-
 
 class amc_rtb(audsley):
     """amc-rtb based schedulability test and priority assignment."""

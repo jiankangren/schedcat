@@ -12,9 +12,6 @@ class audsley:
         else:
             self.taskset = None
 
-    def __pick_next_task(self):
-        pass
-
     def __default_per_task_intf(self, task, hyperperiod, mode="low"):
         budget = None
         period = None
@@ -35,15 +32,43 @@ class audsley:
             rtb += self.__default_per_task_intf(task, hyperperiod, mode); 
         return rtb
 
+    def is_eligible(self, task, rtb):
+        """Check task's success in completion before deadline."""
+        task_budget = task.bl_lo
+        eligible = False
+        if (task.deadline - rtb) >= task_budget:
+            eligible = True
+        return eligible
+
     def __default_prio_assign(self):
         """Default priority assigment implementation for Audsley's approach.'"""
-        for i in range(len(self.taskset)):
-            # Iterate for max instances of task in taskset.
-            # Priority minimum to maximum.
-            total_intf = 0
-            priority_vals = [i for i in range(len(self.taskset))]
-            for task in self.taskset:
-                total_intf = self.__default_rtb
+        # Iterate for max instances of task in taskset.
+        # Priority minimum to maximum.
+        taskset_schedulable = True
+        total_intf = 0
+        taskset_len = len(self.taskset)
+        taskset_copy = copy(self.taskset)
+        priority_vals = [i for i in range(taskset_len)]
+        #Pick each task, check if its eligible for lowest prio. if not push to
+        #end of queue, pick a new one. repeat till all tasks are assigned prio
+        #-rities or taskset is unschedulable.
+        for prio in priority_vals:
+            eligible = False
+            task_pick = taskset_copy.popfront()
+            takset_len = len(taskset_copy)
+            for var in range(taskset_len):
+                total_intf = self.__default_rtb(taskset_copy)
+                if(self.is_eligible(task, total_intf)):
+                    eligible = True
+                    task.pr_lo = prio
+                    break
+                else:
+                    taskset_copy.push(task_pick)
+                    task_pick = taskset_copy.popfront()
+            if eligible == False:
+                taskset_schedulable = False
+                break
+        return taskset_schedulable
 
     def assign_priorities(self, func = self.__default_prio_assign):
         """Audsley's priority assigment.'"""
