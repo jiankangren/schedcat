@@ -78,3 +78,30 @@ class audsley:
         except ValueError:
             print("Failed to assign priorities to taskset.\n")
         return prio_taskset
+
+    def sort_by_crit(self):
+        """Sort the given taskset according to criticality first deadline
+        monotonic order."""
+        prev_ind  = 0
+        prio_prev = 0
+        prio_curr = 0
+        tasklen = len(self.taskset)
+        prio_indices = []
+        self.taskset.sort(lambda x: x.crit, reverse=True)
+        for i in range(tasklen):
+            prio_curr = self.taskset[tasklen].pr_lo
+            if(prio_curr != prio_prev):
+                prio_indices.append((prev_ind, i))
+                prio_prev = prio_curr
+                prev_ind = i
+        for ind in prio_indices:
+            self.taskset[ind[0]:ind[1]] = sorted(self.taskset[ind[0]:ind[1]],key=lambda x: x.dl_lo, reverse=True)
+
+    def sort_by_prio(self):
+        """Sort the given taskset according to priority."""
+        pass
+
+
+
+    
+
