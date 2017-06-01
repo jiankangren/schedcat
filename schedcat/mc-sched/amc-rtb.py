@@ -11,7 +11,7 @@ class amc_rtb(audsley):
     def __init__(self, taskset):
         super(amc_rtb, self).__init__(taskset)
     
-    def __amc_rtb_low(self, task):
+    def __amc_rtb_low(self, task, taskset=None):
         """Calculate the response time of low criticality tasks."""
         R_lo = task.b_lo
         for ind in self.taskset:
@@ -19,27 +19,40 @@ class amc_rtb(audsley):
                 R_lo += math.ceil(R_lo/ind.pr_lo) * ind.b_lo
         return R_lo
     
-    def __amc_rtb_high(self, R_initial):
+    def __amc_rtb_high(self,task, R_initial, taskset=None):
         """Calculate the response time of the high criticality tasks."""
         R_hi = R_initial
         for ind in self.taskset:
-            if (ind.prio == 1) and (ind != task):
+            if (ind.crit == 1) and (ind != task):
                 R_hi += math.ceil(R_hi/ind.pr_hi) * ind.b_hi
         return R_hi
 
-    def dbf_amc_rtb(self, task):
+    def dbf_amc_rtb(self, task, taskset=None):
         """Demand bound function for amc-rtb."""
         rtb = task.b_hi
-        rtb += self.__amc_rtb_low(task)
+        rtb += self.__amc_rtb_low(task, taskset)
         if task.crit == 1:
-            rtb += self.__amc_rtb_high(task)
+            rtb += self.__amc_rtb_high(task, rtb, taskset)
         return rtb
-            
 
-    def check_schedulability(self, task):
+    def check_schedulability(self, task, taskset=None):
         """Check schedulability based on amc-rtb """
-        
+        rtb = 0.0
+        status = True
+        rtb = self.dbf_amc_rtb(task, taskset)
+        if rtb > task.dl_lo:
+            status = False
+        return status
 
     def assign_priority(self):
         """Priority assignment based on Audsley's approach."""
-        pass
+        prio_assigned = []
+        try:
+            prio_assigned = self.assign_priorities(check_schedulability)
+        except ValueError as vs:
+            print("Failed to assign priorities: Taskset not schedulable.\n")
+            raise ValueError("schedulability test failed.\n") # Throw for test.
+        return prio_assigned
+
+        
+        

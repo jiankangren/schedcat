@@ -87,19 +87,31 @@ class audsley:
         prio_curr = 0
         tasklen = len(self.taskset)
         prio_indices = []
-        self.taskset.sort(lambda x: x.crit, reverse=True)
+        new_tskset = copy(self.taskset)
+        new_tskset.sort(lambda x: x.crit, reverse=True)
         for i in range(tasklen):
-            prio_curr = self.taskset[tasklen].pr_lo
+            prio_curr = new_tskset[tasklen].pr_lo
             if(prio_curr != prio_prev):
                 prio_indices.append((prev_ind, i))
                 prio_prev = prio_curr
                 prev_ind = i
         for ind in prio_indices:
-            self.taskset[ind[0]:ind[1]] = sorted(self.taskset[ind[0]:ind[1]],key=lambda x: x.dl_lo, reverse=True)
+            new_tskset[ind[0]:ind[1]] = sorted(new_tskset[ind[0]:ind[1]],key=lambda x: x.dl_lo, reverse=True)
+        return new_tskset
 
-    def sort_by_prio(self):
+    def sort_by_prio(self, mode=0):
         """Sort the given taskset according to priority."""
-        pass
+        new_tskset = []
+        if mode == 0:
+            # Sort for low criticality.
+            new_tskset = copy(self.taskset)
+            new_tskset = sorted(new_tskset, lambda x: x.pr_lo, reverse=True)
+        else:
+            for task in self.taskset:
+                if task.crit:
+                    new_tskset.append(task)
+            new_tskset = sorted(new_tskset, lambda x: x.pr_hi, reverse=True)
+        return new_tskset
 
 
 
