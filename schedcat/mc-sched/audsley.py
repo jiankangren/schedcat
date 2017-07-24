@@ -1,6 +1,7 @@
 import random
 import math
 from task import task # Abstract representation of task with two crit level.
+from taskset import taskset
 
 class audsley:
     """Base class with audsley implementation."""
