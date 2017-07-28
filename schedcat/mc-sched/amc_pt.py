@@ -54,17 +54,24 @@ class ptamc(amc_rtb):
             R_i_hi += math.ceil(R_i_hi/t.t_hi) * t.c_lo
         return R_i_hi
     
-    def __get_worse_case_transition_response_time(self, task, q = 0):
+    def __get_transition_response_time(self, task):
         """Get the worst case response time for task in crit transition."""
-        # Find the level i Busy Period in low crit mode.
+
+        # First find the level i Busy Period in low crit mode.
+
+        # tasks with priority greater than or equal to task.
+        taskset_hep = self.taskset.get_high_equal_prio_tasks(task)
         LBP_i_lo = B_i_lo
+        for t taskset_hep:
+            LBP_i_lo += math.ceil(LBP_i_lo/t.t_lo) * t.c_lo
+        
+        R_i_tran = 0
+        for q in range(int(math.floor(LBP_i_lo/task.t_lo))):
+            R_i_trans = max(R_i_trans, self.__get_transition_response_time(task, q))
+        return R_i_trans
 
     def __get_transition_response_time(self, task, q = 0):
-        """Sufficient schedulability test for pt-amc.
-        Two necessary conditions are checked:
-        1. Schedulability in low criticality.
-        2. Schedulability in high crit in transition.
-        """
+        """Response time for transition from low to high crit."""
         # Determine worst case starting point of task while in low criticality
         # mode.
         S_i_q_lo = B_i_lo + q * task.c_lo
@@ -77,17 +84,18 @@ class ptamc(amc_rtb):
             F_i_q_lo += ( math.ceil(F_i_q_lo/t.t_lo) - 
                     (1 + math.floor(S_i_q_lo/t.t_lo)) * t.c_lo)
 
-        # Determine the worst case blocking.
-        # Assuming no offset release of the tasik.
+        # Determine the worst case blocking while in transition to high crit.
+        # Assuming no offset release of the task.
         if q == 0:
             B_i_q_tran = max(B_i_hi, B_i_lo)
         else:
             B_i_q_tran = B_i_lo
         # Determine Worst case starting point while in criticality transition.
-        
         high_prio_lo_crit_tasks = self.taskset.get_taskset_low_crit_high_prio(task)
         high_prio_hi_crit_tasks = self.taskset.get_taskset_high_crit_high_prio(task)
+        
         S_i_q_trans = B_i_q_tran + q * task.c_lo
+        
         for t in high_prio_lo_crit_tasks:
             S_i_q_trans += math.ceil(S_i_q_lo/t.t_lo) * t.c_lo
 
@@ -115,6 +123,32 @@ class ptamc(amc_rtb):
         R_i_q = max(F_i_q_trans_bf, F_i_q_trans_af) - q*t.t_lo
         return R_i_q
 
+    def __is_task_schedulable(self):
+        """Sufficient schedulability test for pt-amc.
+        Two necessary conditions are checked:
+        1. Schedulability in low criticality.
+        2. Schedulability in high crit in transition.
+        """
+        Lo_schedulable = True
+        Hi_schedulable = True
+        for task in self.taskset:
+            if self.__get_lo_crit_response_time(task) < task.d_lo:
+                continue
+            else:
+                Lo_schedulable = False
+                break
+        if Lo_schedulable:
+            hi_tasks = self.taskset.get_tasks_by_crit('high')
+            for task in hi_tasks:
+                trans_rta = self.__get_transition_response_time(task)
+                hi_rta = self.__get_hi_crit_response_time(task)
+                if max(trans_rta, hi_rta) < task.d_lo:
+                    continue
+                else:
+                    Hi_schedulable = False
+                    break
+        return Lo_schedulable and Hi_schedulable
+        
 
     def __generate_preemption_threshold(self):
         """Maximal Preemption Threshold Assignment Algorithm(MPTAA) implementation.
