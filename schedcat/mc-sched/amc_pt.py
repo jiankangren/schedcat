@@ -1,12 +1,14 @@
-import amc_rtb as amc_rtb
-from taskset import taskset
-import sys
+import amc_rtb as AmcRtb
+from taskset import Taskset
+from copy import copy
+import math
 
-class ptamc(amc_rtb):
+
+class ptamc(AmcRtb):
     
     def __init__(self, folder, file):
-        self.taskset = taskset()
-        self.processed_taskset = taskset()
+        self.taskset = Taskset()
+        self.processed_taskset = Taskset()
         self.file = folder + '/' + file
         self.pt_array = []
 
@@ -15,7 +17,7 @@ class ptamc(amc_rtb):
         try:
             if file is None:
                 file = self.file
-            taskset.create_from_json(file)
+            taskset.generate_taskset_from_json(file)
         except IOError:
             print("Error opening file {0}.\n".format(file))
     
@@ -62,7 +64,7 @@ class ptamc(amc_rtb):
         # tasks with priority greater than or equal to task.
         taskset_hep = self.taskset.get_high_equal_prio_tasks(task)
         LBP_i_lo = B_i_lo
-        for t taskset_hep:
+        for t in taskset_hep:
             LBP_i_lo += math.ceil(LBP_i_lo/t.t_lo) * t.c_lo
         
         R_i_tran = 0

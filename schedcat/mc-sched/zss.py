@@ -3,13 +3,13 @@ import glob
 import json
 import os
 import errno
-from taskset import taskset
+from taskset import Taskset
 
 class zss:
     def __init__(self, folder = None, file = None):
         self.folder = folder
         self.file = folder + '/' + file
-        self.taskset = taskset()
+        self.taskset = Taskset()
         self.processed_taskset = None
         self.slack_vectors = []
     
@@ -31,22 +31,23 @@ class zss:
     def __retrieve_taskset(self):
         """Load tasksets from json file."""
         json_taskset = []
-        self.taskset.load_from_json(file)
-        print("loaded {0} tasksets from files".format(len(self.tasksets)))
+        self.taskset.generate_taskset_from_json(self.file)
+        print("loaded {0} tasksets from files".format(len(self.taskset)))
 
     def __save_zero_slack_taskset(self):
         """Create output folder and save the calculated taskset."""
         output_dir = self.folder + 'output'
         try:
             os.makedirs(self.folder + 'output')
-        except OsError as exception:
+        except OSError as exception:
             if exception.errno != errno.EEXIST:
-                raise FileException(errno)
-        file_name = output_dir + str(index) + '_taskset_processed.json'
+                raise FileExistsError(errno)
+        file_name = output_dir + str("zss") + '_taskset_processed.json'
         self.taskset.save_taskset_to_json(file_name)
-        print("wrote {0} tasksets to {1} directory.\n", len(self.tasksets), output_dir)
+        print("wrote {0} tasksets to {1} directory.\n", len(self.taskset), output_dir)
 
-    def __get_conditional_taskset(self, task, taskset, condition_check):
+    @staticmethod
+    def __get_conditional_taskset(task, taskset, condition_check):
         """Filter given taskset as per the given condition check function."""
         filtered_taskset = []
         for t in taskset:
@@ -54,14 +55,15 @@ class zss:
                 filtered_taskset.append(task)
         return filtered_taskset
 
-    def __start_of_trailing_slack(self, t_i, slack_vec):
+    @staticmethod
+    def __start_of_trailing_slack(t_i, slack_vec):
         """Get instance of trailing slack to given task."""
         b_i = t_i.budget # Task budget.
         d_i = t_i.deadline # Task deadline.
         trailing_slack_start = -1
         status = True
         index = 0
-        rev_slack_vec = sorted(slack_vec, key=lambda x: x["deadline"], reversed)
+        rev_slack_vec = sorted(slack_vec, key=lambda x: x["deadline"], reverse=True)
         for i, slack in enumerate(rev_slack_vec):
             # Slack needs to be searched for deadline upto the deadline of 
             # task being tested.
@@ -82,7 +84,8 @@ class zss:
             status = False
         return (status, trailing_slack_start)
 
-    def __get_slack_upto_instance(self, slack_vec, slack_instance, t_i):
+    @staticmethod
+    def __get_slack_upto_instance(slack_vec, slack_instance, t_i):
         """Total available slack upto slack_instance."""
         avail_slack = 0
         slack_index = 0
@@ -99,24 +102,25 @@ class zss:
                     avail_slack += slack["budget"]
         return avail_slack
 
-
-    def __get_zero_slack_instant(self, task, norm_slack, high_slack):
+    @staticmethod
+    def __get_zero_slack_instant(task, norm_slack, high_slack):
         """Calculate the maximum available slack."""
         pass
 
+    @staticmethod
     def __get__effective_budget(task, prio, mode):
         """Get the effective execution budget for task."""
-        return C_e = 0
+        effective_budget = 0
         if task.prio > prio:
             if task.crit == 'normal':
-                C_e = task.b_lo
+                effective_budget = task.b_lo
             else:
-                C_e = task.b_hi
+                effective_budget = task.b_hi
         else:
             if task.crit == 'high':
-                C_e = task.b_lo - task.slack
+                effective_budget = task.b_lo - task.slack
 
-        return C_e
+        return effective_budget
 
     def __get_slack_vector(self, task, taskseti, mode='normal'):
         """An ordered list of slacks available in the given given taskset.
@@ -125,8 +129,8 @@ class zss:
         """
         C_i_v = 0
         R_current = C_i_v
-        interfering_tasks_c = taskset.__get_taskset_high_crit_high_prio(t)
-        interfering_tasks_n = taskset.__get_taskset_normal_crit_high_prio(t)
+        interfering_tasks_c = self.taskset.__get_taskset_high_crit_high_prio(t)
+        interfering_tasks_n = self.taskset.__get_taskset_normal_crit_high_prio(t)
         while(R_current >= t.period):
             R_previous = R_current
             b = 0

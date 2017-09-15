@@ -1,11 +1,15 @@
 import sys
-from audsley import audsley
-from taskset import taskset
+from audsley import Audsley
+import math
+import copy
+from taskset import Taskset
 
-class icg_dbf(audsley):
+
+class IcgDBF(Audsley):
     """Speed up bound and schedulability check for ICG"""
     
     def __init__(self, taskset):
+        super(IcgDBF, self).__init__()
         self.taskset = taskset
         self.graph = {}
 
@@ -21,15 +25,15 @@ class icg_dbf(audsley):
     def __create_new_node(self, t):
         """Create a new node to be inserted in the graph.
         Each node consists of a vertex, which is the task t, a set of
-        edges representing the tasks which t can interfer with and edge 
+        edges representing the tasks which t can interfere with and edge
         weight, which is budget of the current task in criticality level of target
         task(if edge from t_i to t_j, weight is C_i in criticality level of t_j ).
         """
         node = {
-                "vertex":t,
+                "vertex": t,
                 "edges": [],
                 }
-        self.graph[task.index] = node
+        self.graph[t.index] = node
 
     def __asign_task_priorities(self):
         """Use audsley priority assignment on given taskset."""
@@ -60,7 +64,7 @@ class icg_dbf(audsley):
             else:
                 sigma_i_j = task.b_lo
             
-            RTA_i += math.ceil(R_i/t.t_lo) * min(sigma_i_j, sigma_j_i)
+            RTA_i += math.ceil(RTA_i/t.t_lo) * min(sigma_i_j, sigma_j_i)
         return RTA_i
 
     def interference_minimization(self):
@@ -74,8 +78,6 @@ class icg_dbf(audsley):
     def icg_schedulability(self):
         """ICG schedulability test based on graph based representation with
         interference allowed."""
-        
-        
 
 # Edge modification and addition api set.
     def __calculate_graph_edges(self):
@@ -84,42 +86,48 @@ class icg_dbf(audsley):
 
 # Auxiliary functions to determine the speedup factor of given tasks.
 
-    def __get_scheduling_points(self, task, taskset):
+    def __get_scheduling_points(self, task, taskset=None):
         """Get the scheduling points as per lehocsky's approach.'"""
         schedule_points = []
+        if taskset is None:
+            taskset = self.taskset
         for i in range(1, task.prio):
-            k_range = task.d_lo / taskset[i].t_lo
-            for k in range(1, math.floor(k_range)):
+            k_range = task.d_lo // taskset[i].t_lo
+            for k in range(1, k_range):
                 schedule_points.append(k * taskset[i].t_lo)
         return schedule_points
 
-    def __get_critical_scaling_factor(self, task, taskset):
+    def __get_critical_scaling_factor(self, task, taskset=None):
         """Determine critical speed up factor for given task."""
         scale_factor = 0
+        if taskset is None:
+            taskset = self.taskset
         schedule_points = self.__get_scheduling_points(task)
         for t in schedule_points:
             iter_scale = 0
             for i in range(t):
-                C_j_i = 0
-                T_j_i = 0
+                c_j_i = 0
+                t_j_i = 0
                 if task.crit == 'high':
-                    C_j_i = taskset[i].c_hi
-                    T_j_i = taskset[i].t_hi
+                    c_j_i = taskset[i].c_hi
+                    t_j_i = taskset[i].t_hi
                 else:
-                    C_j_i = taskset[i].c_lo
-                    T_j_i = taskset[i].t_lo
-                iter_scale += (C_j_i/t) * math.ceil(t/T_j_i)
+                    c_j_i = taskset[i].c_lo
+                    t_j_i = taskset[i].t_lo
+                iter_scale += (c_j_i/t) * math.ceil(t/t_j_i)
             scale_factor = min(scale_factor, iter_scale)
         return 1/scale_factor
 
-    def __speed_modulation(self, priority_count = 0):
+    def __speed_modulation(self, priority_count=0):
         """Determine maximum scaling factor."""
         critical_speedup = 0
         if priority_count == 0:
             raise ValueError("No of priorities should not be non zero.\n")
         taskset_local = copy.copy(self.taskset)
         taskset_prio_assigned = []
-        is_not_picked = lambda x, y: return x.index == y.index
+
+        def is_not_picked(x, y):
+            return x.index == y.index
 
         for i in reversed(range(priority_count, 1)):
             task_vestal = None
@@ -130,7 +138,7 @@ class icg_dbf(audsley):
                 else:
                     crit_speed_prev = self.__get_critical_scaling_factor(task_vestal, taskset_local)
                     crit_speed_curr = self.__get_critical_scaling_factor(task, taskset_local)
-                    if crit_speed_prev < crit_speed_factor:
+                    if crit_speed_prev < crit_speed_curr:
                         task_vestal = task
             task.prio = i
             # Remove the picked task from next iteration loop and add to new priority list.
